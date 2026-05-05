@@ -1,0 +1,6 @@
+numpy
+opencv-python
+python-chess
+Pillow
+scikit-learn
+imutils
