@@ -41,6 +41,8 @@ def speak_georgian(text):
     if os.path.exists(file_path):
         os.remove(file_path)
 
+
+
 # --- ტესტირება ---
 if __name__ == "__main__":
     speak_georgian("თამაში დაიწყო, ველოდები თქვენს სვლას")

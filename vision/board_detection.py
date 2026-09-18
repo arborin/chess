@@ -1,100 +1,54 @@
-# img = load_image(r"D:\projects\chess\images\board.jpg")
+import cv2
+import numpy as np
 
 import cv2
 import numpy as np
 
-# ----------------------------
-# Split board
-# ----------------------------
-def split_board(img):
-    h, w = img.shape[:2]
-    dh, dw = h // 8, w // 8
+def debug_chess_move(img1_path, img2_path):
+    img1 = cv2.imread(img1_path)
+    img2 = cv2.imread(img2_path)
 
-    squares = []
-    for y in range(8):
-        row = []
-        for x in range(8):
-            sq = img[y*dh:(y+1)*dh, x*dw:(x+1)*dw]
-            row.append(sq)
-        squares.append(row)
-    return squares
+    if img1 is None or img2 is None:
+        print("❌ სურათები ვერ ჩაიტვირთა!")
+        return
 
+    # ზომის სტანდარტიზაცია
+    img1 = cv2.resize(img1, (1600, 1600))
+    img2 = cv2.resize(img2, (1600, 1600))
+    sq_size = 200
 
-# ----------------------------
-# Crop center (ignore borders)
-# ----------------------------
-def crop_center(square):
-    h, w = square.shape[:2]
-    return square[int(h*0.2):int(h*0.8), int(w*0.2):int(w*0.8)]
+    gray1 = cv2.GaussianBlur(cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY), (5, 5), 0)
+    gray2 = cv2.GaussianBlur(cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY), (5, 5), 0)
 
+    files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
+    ranks = [8, 7, 6, 5, 4, 3, 2, 1]
 
-# ----------------------------
-# Detect if square has piece
-# ----------------------------
-def has_piece(square):
-    square = crop_center(square)
+    differences = {}
+    margin = 25
 
-    gray = cv2.cvtColor(square, cv2.COLOR_BGR2GRAY)
+    for row_idx, rank in enumerate(ranks):
+        for col_idx, file_letter in enumerate(files):
+            sq_name = f"{file_letter}{rank}"
 
-    # Edge detection (key improvement)
-    edges = cv2.Canny(gray, 50, 150)
+            # კოორდინატების გამოთვლა
+            x1 = col_idx * sq_size + margin
+            y1 = row_idx * sq_size + margin
+            x2 = (col_idx + 1) * sq_size - margin
+            y2 = (row_idx + 1) * sq_size - margin
 
-    edge_count = np.sum(edges > 0)
-    total = square.shape[0] * square.shape[1]
+            crop1 = gray1[y1:y2, x1:x2]
+            crop2 = gray2[y1:y2, x1:x2]
 
-    ratio = edge_count / total
+            diff = cv2.absdiff(crop1, crop2)
+            differences[sq_name] = int(np.sum(diff))
 
-    return ratio > 0.02   # tune this
+    # დავლაგოთ და დაბეჭდოთ ტოპ-5 უჯრა
+    sorted_sqs = sorted(differences, key=lambda k: differences.get(k, 0), reverse=True)
 
+    print("--- 📊 ტოპ 5 ცვლილება ---")
+    for i in range(5):
+        sq = sorted_sqs[i]
+        print(f"{i+1}. უჯრა: {sq.upper()} -> ქულა: {differences[sq]}")
 
-# ----------------------------
-# Detect piece color
-# ----------------------------
-def get_piece_color(square):
-    square = crop_center(square)
-
-    gray = cv2.cvtColor(square, cv2.COLOR_BGR2GRAY)
-    mean = np.mean(gray)
-
-    return "white" if mean > 140 else "black"
-
-
-# ----------------------------
-# Detect board
-# ----------------------------
-def detect_board(img):
-    img = cv2.resize(img, (800, 800))  # normalize
-    squares = split_board(img)
-
-    board = []
-
-    for row in squares:
-        board_row = []
-        for sq in row:
-            if not has_piece(sq):
-                board_row.append(".")
-            else:
-                color = get_piece_color(sq)
-                board_row.append("W" if color == "white" else "B")
-
-        board.append(board_row)
-
-    return board
-
-
-# ----------------------------
-# Print board
-# ----------------------------
-def print_board(board):
-    for row in board:
-        print(" ".join(row))
-
-
-# ----------------------------
-# MAIN
-# ----------------------------
-img = cv2.imread(r"D:\projects\chess\images\board.jpg")
-# img = load_image(r"D:\projects\chess\images\board.jpg")
-
-board = detect_board(img)
-print_board(board)
+if __name__ == "__main__":
+    debug_chess_move("cropped_1.jpg", "cropped_2.jpg")
